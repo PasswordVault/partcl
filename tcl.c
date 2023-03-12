@@ -131,7 +131,7 @@ void tcl_free(tcl_value_t *v) { free(v); }
 
 tcl_value_t *tcl_append_string(tcl_value_t *v, const char *s, size_t len) {
   size_t n = tcl_length(v);
-  v = realloc(v, n + len + 1);
+  v = (tcl_value_t*)realloc(v, n + len + 1);
   memset((char *)tcl_string(v) + n, 0, len + 1);
   strncpy((char *)tcl_string(v) + n, s, len);
   return v;
@@ -234,14 +234,14 @@ struct tcl_env {
 };
 
 static struct tcl_env *tcl_env_alloc(struct tcl_env *parent) {
-  struct tcl_env *env = malloc(sizeof(*env));
+  struct tcl_env *env = (tcl_env*)malloc(sizeof(*env));
   env->vars = NULL;
   env->parent = parent;
   return env;
 }
 
 static struct tcl_var *tcl_env_var(struct tcl_env *env, tcl_value_t *name) {
-  struct tcl_var *var = malloc(sizeof(struct tcl_var));
+  struct tcl_var *var = (tcl_var*)malloc(sizeof(struct tcl_var));
   var->name = tcl_dup(name);
   var->next = env->vars;
   var->value = tcl_alloc("", 0);
@@ -350,11 +350,12 @@ int tcl_eval(struct tcl *tcl, const char *s, size_t len) {
       tcl_free(cur);
       cur = NULL;
       break;
-    case TPART:
+    case TPART: {
       tcl_subst(tcl, p.from, p.to - p.from);
       tcl_value_t *part = tcl_dup(tcl->result);
       cur = tcl_append(cur, part);
       break;
+    }
     case TCMD:
       if (tcl_list_length(list) == 0) {
         tcl_result(tcl, FNORMAL, tcl_alloc("", 0));
@@ -392,7 +393,7 @@ int tcl_eval(struct tcl *tcl, const char *s, size_t len) {
 /* --------------------------------- */
 void tcl_register(struct tcl *tcl, const char *name, tcl_cmd_fn_t fn, int arity,
                   void *arg) {
-  struct tcl_cmd *cmd = malloc(sizeof(struct tcl_cmd));
+  struct tcl_cmd *cmd = (tcl_cmd*)malloc(sizeof(struct tcl_cmd));
   cmd->name = tcl_alloc(name, strlen(name));
   cmd->fn = fn;
   cmd->arg = arg;
@@ -633,7 +634,7 @@ void tcl_destroy(struct tcl *tcl) {
 int main() {
   struct tcl tcl;
   int buflen = CHUNK;
-  char *buf = malloc(buflen);
+  char *buf = (char*)malloc(buflen);
   int i = 0;
 
   tcl_init(&tcl);
@@ -641,7 +642,7 @@ int main() {
     int inp = fgetc(stdin);
 
     if (i > buflen - 1) {
-      buf = realloc(buf, buflen += CHUNK);
+      buf = (char*)realloc(buf, buflen += CHUNK);
     }
 
     if (inp == 0 || inp == EOF) {
